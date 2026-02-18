@@ -116,7 +116,7 @@ function formatNumber(num) {
 }
 
 function calculate() {
-    // 입력값 정리 (숫자만 추출)
+    // 입력값 정리
     let normal = Number(normalPriceInput.value.replace(/[^0-9]/g, '')) || 0;
     let world  = Number(worldPriceInput.value.replace(/[^0-9]/g, ''))  || 0;
 
@@ -126,19 +126,25 @@ function calculate() {
     if (normal === 0 && world === 0) {
         normalResultText.textContent = '0';
         worldResultText.textContent  = '0';
-        comparisonText.textContent   = '가격을 입력해주세요';
+        comparisonText.textContent   = '등록 수수료를 포함한 금액입니다.';
         comparisonText.className     = 'comparison';
         return;
     }
 
-    // 일반 거래소는 무조건 10%
-    const NORMAL_FEE = 0.1;
-    // 월드 거래소는 선택한 값 (10% 또는 20%)
-    let worldFee = parseFloat(feeSelect.value);
+    // 공통 등록 수수료 2%
+    const REG_FEE = 0.02;
 
-    // 실수령 계산 (소수점 버림 = Math.floor)
-    let normalAfterFee = Math.floor(normal * (1 - NORMAL_FEE));
-    let worldAfterFee  = Math.floor(world  * (1 - worldFee));
+    // 일반 거래소 판매 수수료 고정 10%
+    const NORMAL_SALE_FEE = 0.1;
+    // 월드 거래소 판매 수수료 선택 (보통 20%)
+    let worldSaleFee = parseFloat(feeSelect.value);
+
+    // 계산: 등록 후 → 판매 수수료 적용 (floor 처리)
+    let normalAfterReg  = Math.floor(normal * (1 - REG_FEE));
+    let normalAfterFee  = Math.floor(normalAfterReg * (1 - NORMAL_SALE_FEE));
+
+    let worldAfterReg   = Math.floor(world * (1 - REG_FEE));
+    let worldAfterFee   = Math.floor(worldAfterReg * (1 - worldSaleFee));
 
     normalResultText.textContent = formatNumber(normalAfterFee);
     worldResultText.textContent  = formatNumber(worldAfterFee);
@@ -147,10 +153,10 @@ function calculate() {
     let diff = worldAfterFee - normalAfterFee;
 
     if (diff > 0) {
-        comparisonText.innerHTML = `월드 거래소가 <span class="win">+${formatNumber(diff)}원</span> 더 이득입니다!`;
+        comparisonText.innerHTML = `월드 거래소가 <span class="win">+${formatNumber(diff)}원</span> 더 이득! (판매량 많을 때 유리)`;
         comparisonText.className = 'comparison win';
     } else if (diff < 0) {
-        comparisonText.innerHTML = `일반 거래소가 <span class="win">+${formatNumber(-diff)}원</span> 더 이득입니다!`;
+        comparisonText.innerHTML = `일반 거래소가 <span class="win">+${formatNumber(-diff)}원</span> 더 이득!`;
         comparisonText.className = 'comparison win';
     } else {
         comparisonText.textContent = '두 거래소 실수령액이 같습니다';
@@ -163,7 +169,7 @@ normalPriceInput.addEventListener('input', calculate);
 worldPriceInput.addEventListener('input', calculate);
 feeSelect.addEventListener('change', calculate);
 
-// 페이지 로드 시 초기 계산
+// 초기 계산
 calculate();
 </script>
 
