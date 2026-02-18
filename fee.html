@@ -11,33 +11,61 @@
     }
     .container {
         background: white;
-        padding: 20px;
-        max-width: 400px;
+        padding: 25px;
+        max-width: 420px;
         margin: auto;
         border-radius: 10px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-		text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        text-align: center;
     }
     h2 {
-        text-align: center;
+        margin-bottom: 20px;
+        color: #333;
+    }
+    label {
+        display: block;
+        margin: 12px 0 6px;
+        font-weight: bold;
+        color: #555;
     }
     input, select {
-        width: 300px;
+        width: 100%;
+        max-width: 320px;
         padding: 10px;
-		margin-left: auto;
-		margin-right: auto;
-        margin-top: 10px;
         font-size: 16px;
-		display: block;
-		border: solid 1px #AAA;
-		border-radius: 3px;
+        border: 1px solid #aaa;
+        border-radius: 5px;
+        box-sizing: border-box;
+        margin: 0 auto;
+        display: block;
+    }
+    .result-box {
+        margin: 25px 0;
+        padding: 15px;
+        background: #f8f9fa;
+        border-radius: 8px;
+        border: 1px solid #e0e0e0;
     }
     .result {
-        margin-top: 20px;
-        font-size: 18px;
+        font-size: 19px;
         font-weight: bold;
-        text-align: center;
         color: #2c7be5;
+        margin: 10px 0;
+    }
+    .comparison {
+        font-size: 17px;
+        margin: 8px 0;
+    }
+    .win {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .lose {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .equal {
+        color: #6c757d;
     }
 </style>
 </head>
@@ -46,48 +74,97 @@
 <div class="container">
     <h2>AION2 거래소 수수료 계산기</h2>
 
-    <!-- 금액 입력 -->
-    <label>판매 금액 입력</label>
-    <input type="text" id="price" placeholder="숫자만 입력" inputmode="numeric">
+    <!-- 일반 거래소 가격 -->
+    <label>일반 거래소 판매 단가 (원)</label>
+    <input type="text" id="normalPrice" placeholder="숫자만 입력" inputmode="numeric">
+
+    <!-- 월드 거래소 가격 -->
+    <label>월드 거래소 판매 단가 (원)</label>
+    <input type="text" id="worldPrice" placeholder="숫자만 입력" inputmode="numeric">
 
     <!-- 수수료 선택 -->
-    <label>수수료 선택</label>
+    <label>수수료율 선택 (보통 월드 거래소 적용)</label>
     <select id="fee">
         <option value="0.1">10%</option>
-        <option value="0.2">20%</option>
+        <option value="0.2" selected>20%</option>
     </select>
 
-    <!-- 결과 -->
-    <div class="result">
-        실수령 금액: <span id="result">0</span> 원
+    <!-- 결과 영역 -->
+    <div class="result-box">
+        <div class="result">
+            일반 거래소 실수령: <span id="normalResult">0</span> 원
+        </div>
+        <div class="result">
+            월드 거래소 실수령: <span id="worldResult">0</span> 원
+        </div>
+        <div class="comparison" id="comparisonText">
+            ← 비교 결과가 여기에 나옵니다 →
+        </div>
     </div>
 </div>
 
 <script>
-const priceInput = document.getElementById('price');
-const feeSelect = document.getElementById('fee');
-const resultText = document.getElementById('result');
+const normalPriceInput = document.getElementById('normalPrice');
+const worldPriceInput  = document.getElementById('worldPrice');
+const feeSelect        = document.getElementById('fee');
+const normalResultText = document.getElementById('normalResult');
+const worldResultText  = document.getElementById('worldResult');
+const comparisonText   = document.getElementById('comparisonText');
+
+function formatNumber(num) {
+    return num.toLocaleString('ko-KR');
+}
 
 function calculate() {
-    let price = priceInput.value.replace(/[^0-9]/g, '');
-    priceInput.value = price; // 숫자만 유지
+    // 입력값 정리 (숫자만 추출)
+    let normal = Number(normalPriceInput.value.replace(/[^0-9]/g, '')) || 0;
+    let world  = Number(worldPriceInput.value.replace(/[^0-9]/g, ''))  || 0;
 
-    if (price === '') {
-        resultText.textContent = '0';
+    normalPriceInput.value = normal;
+    worldPriceInput.value  = world;
+
+    if (normal === 0 && world === 0) {
+        normalResultText.textContent = '0';
+        worldResultText.textContent  = '0';
+        comparisonText.textContent   = '가격을 입력해주세요';
+        comparisonText.className     = 'comparison';
         return;
     }
 
-    let fee = parseFloat(feeSelect.value);
-    let finalAmount = price - (price * fee);
+    // 일반 거래소는 무조건 10%
+    const NORMAL_FEE = 0.1;
+    // 월드 거래소는 선택한 값 (10% 또는 20%)
+    let worldFee = parseFloat(feeSelect.value);
 
-    finalAmount = Math.floor(finalAmount);
+    // 실수령 계산 (소수점 버림 = Math.floor)
+    let normalAfterFee = Math.floor(normal * (1 - NORMAL_FEE));
+    let worldAfterFee  = Math.floor(world  * (1 - worldFee));
 
-    resultText.textContent = finalAmount.toLocaleString();
+    normalResultText.textContent = formatNumber(normalAfterFee);
+    worldResultText.textContent  = formatNumber(worldAfterFee);
+
+    // 비교
+    let diff = worldAfterFee - normalAfterFee;
+
+    if (diff > 0) {
+        comparisonText.innerHTML = `월드 거래소가 <span class="win">+${formatNumber(diff)}원</span> 더 이득입니다!`;
+        comparisonText.className = 'comparison win';
+    } else if (diff < 0) {
+        comparisonText.innerHTML = `일반 거래소가 <span class="win">+${formatNumber(-diff)}원</span> 더 이득입니다!`;
+        comparisonText.className = 'comparison win';
+    } else {
+        comparisonText.textContent = '두 거래소 실수령액이 같습니다';
+        comparisonText.className = 'comparison equal';
+    }
 }
 
-// 입력 즉시 계산
-priceInput.addEventListener('input', calculate);
+// 이벤트 연결
+normalPriceInput.addEventListener('input', calculate);
+worldPriceInput.addEventListener('input', calculate);
 feeSelect.addEventListener('change', calculate);
+
+// 페이지 로드 시 초기 계산
+calculate();
 </script>
 
 </body>
